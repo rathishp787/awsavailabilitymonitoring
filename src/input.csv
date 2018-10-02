@@ -1,0 +1,7 @@
+Hostname,Type
+ip-10-245-250-137.ec2.internal,Ec2
+ip-10-245-248-176.ec2.internal,Ec2
+jira-Appli-S1O8OWKWYJVL-869837728.us-east-1.elb.amazonaws.com,elb
+jdknla78u4piww.citp5hjarj9e.us-east-1.rds.amazonaws.com,rds
+ip-10-245-250-156.ec2.internal,ec2
+ip-10-245-250-144.ec2.internal,ec2

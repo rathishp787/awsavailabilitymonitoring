@@ -1,0 +1,143 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "SOE : Create S3 Bucket",
+    
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Parameters"
+                    },
+                    "Parameters": [
+                        "s3BucketName",
+                        "secretariat",
+                        "agency",
+                        "environment",
+                        "application"
+                    ]
+                }
+            ]
+        }
+    },
+    "Parameters": {
+        "s3BucketName": {
+            "Description": "Required: The unique name of a new S3 bucket to be created",
+            "Type": "String",
+            "AllowedPattern" : "^[a-z0-9][a-z0-9-.]*$"
+        },
+        "agency": {
+            "Description": "The value for the tag \"agency\"",
+            "Type": "String",
+            "Default": "itd"
+        },
+        "application": {
+            "Description": "The value for the tag \"application\"",
+            "Type": "String",
+            "Default": "monitoring"
+        },
+        "environment": {
+            "Description": "The value for the tag \"environment\"",
+            "Type": "String",
+            "Default": "nonprod"
+        },
+        "secretariat": {
+            "Description": "The value for the tag \"secretariat\"",
+            "Type": "String",
+            "Default": "eotss"
+        }
+    },
+	"Resources":{
+		"S3Bucket":{
+			"Type" : "AWS::S3::Bucket",
+			"Properties" : {
+			    "AccessControl" : "Private",			   
+			    "BucketEncryption" : {
+			    	"ServerSideEncryptionConfiguration":[
+				    	{
+							"ServerSideEncryptionByDefault" : {
+			    				"SSEAlgorithm":"AES256"
+			    			}
+				    	}		    		
+			    	]
+			    },
+			    "BucketName" : {"Ref":"s3BucketName"},	   
+			    "LifecycleConfiguration": {
+                    "Rules": [
+                        {
+                            "Id": "S3toGlacierRule",
+                            "Status": "Enabled",                           
+                            "Transitions": [
+                                {
+                                  "TransitionInDays": "365",
+                                  "StorageClass": "Glacier"
+                                }
+                            ]
+                        },
+                        {
+                            "Id": "DeleteFromS3Rule",                          
+                            "Status": "Enabled",
+                            "ExpirationInDays": "365"                         
+                        },
+                        {
+                            "Id": "DeleteFromGlacierRule",                          
+                            "Status": "Disabled",
+                            "ExpirationInDays": "30"
+                        }
+                    ]
+                },
+                "Tags": [
+                    {
+                        "Key": "agency",
+                        "Value": {
+                            "Ref": "agency"
+                        }
+                    },
+                    {
+                        "Key": "application",
+                        "Value": {
+                            "Ref": "application"
+                        }
+                    },
+                    {
+                        "Key": "environment",
+                        "Value": {
+                            "Ref": "environment"
+                        }
+                    },
+                    {
+                        "Key": "secretariat",
+                        "Value": {
+                            "Ref": "secretariat"
+                        }
+                    }
+                ]
+			}
+		},
+
+		"BucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "DependsOn" : "S3Bucket",
+            "Properties": {
+            	"Bucket" : {"Ref" : "S3Bucket"},
+                "PolicyDocument": {                  
+				    "Statement": [
+				        {
+				            "Action": "s3:GetBucketAcl",
+				            "Effect": "Allow",
+				            "Resource": { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "S3Bucket" }]]},
+				            "Principal": { "Service": "cloudtrail.amazonaws.com" }
+				        },
+				        {
+				            "Action": "s3:PutObject" ,
+				            "Effect": "Allow",
+				            "Resource": { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "S3Bucket" } , "/*" ]]},
+				            "Condition": { "StringEquals": { "s3:x-amz-acl": "bucket-owner-full-control" } },
+				            "Principal": { "Service": "cloudtrail.amazonaws.com" }
+				        }
+					]
+                }
+        	}			    
+		} 
+	}
+}
